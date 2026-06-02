@@ -1,0 +1,306 @@
+def read_file(filename):
+    """Считывает файл и возвращает список словарей с данными детей."""
+    children = []
+
+    try:
+        with open(filename, 'r', encoding='utf-8') as file:
+            lines = file.readlines()
+            if not lines:
+                raise ValueError("Файл пуст")
+
+            for line_num, line in enumerate(lines, 1):
+                if line.strip():  #
+                    parts = line.strip().split('\t')
+
+                    # Проверяем количество полей
+                    if len(parts) != 10:
+                        print(f"Предупреждение: строка {line_num} имеет {len(parts)} полей, ожидается 10. Пропущена.")
+                        continue
+
+                    try:
+                        child = {
+                            'surname': parts[0],
+                            'name': parts[1],
+                            'year': int(parts[2]),
+                            'month': int(parts[3]),
+                            'day': int(parts[4]),
+                            'group': parts[5],
+                            'neuro': parts[6],
+                            'otolaryng': parts[7],
+                            'ortho': parts[8],
+                            'ophtalm': parts[9]
+                        }
+
+
+                        if not (1900 <= child['year'] <= 2026):
+                            raise ValueError(f"Некорректный год рождения: {child['year']}")
+                        if not (1 <= child['month'] <= 12):
+                            raise ValueError(f"Некорректный месяц: {child['month']}")
+                        if not (1 <= child['day'] <= 31):
+                            raise ValueError(f"Некорректный день: {child['day']}")
+
+                        valid_groups = ['младшая', 'средняя', 'старшая']
+                        if child['group'] not in valid_groups:
+                            raise ValueError(f"Некорректная группа: {child['group']}")
+
+                        valid_conclusions = ['здоров', 'нуждается в лечении']
+                        for specialist in ['neuro', 'otolaryng', 'ortho', 'ophtalm']:
+                            if child[specialist] not in valid_conclusions:
+                                raise ValueError(f"Некорректное заключение: {child[specialist]}")
+
+                        children.append(child)
+                    except ValueError as e:
+                        print(f"Предупреждение: строка {line_num} содержит ошибку: {e}. Пропущена.")
+                        continue
+
+        if not children:
+            raise ValueError("Не удалось загрузить ни одной корректной записи")
+
+        print(f"Успешно загружено {len(children)} записей")
+        return children
+
+    except FileNotFoundError:
+        print(f"Ошибка: Файл '{filename}' не найден")
+        return []
+    except ValueError as e:
+        print(f"Ошибка: {e}")
+        return []
+    except Exception as e:
+        print(f"Непредвиденная ошибка при чтении файла: {e}")
+        return []
+
+
+def selection_sort(arr, key_func):
+    """Сортировка выбором по заданной функции ключа."""
+    n = len(arr)
+    for i in range(n):
+        min_idx = i
+        for j in range(i + 1, n):
+            if key_func(arr[j]) < key_func(arr[min_idx]):
+                min_idx = j
+        arr[i], arr[min_idx] = arr[min_idx], arr[i]
+    return arr
+
+
+def count_healthy(child):
+    """Подсчитывает количество здоровых заключений у ребёнка."""
+    return (child['neuro'] == 'здоров') + (child['otolaryng'] == 'здоров') + \
+           (child['ortho'] == 'здоров') + (child['ophtalm'] == 'здоров')
+
+
+
+def generate_report_1(children):
+    """Отчёт 1: по количеству здоровых заключений."""
+    try:
+        if not children:
+            raise ValueError("Нет данных для формирования отчёта")
+
+        report = children.copy()
+
+        selection_sort(report, key_func=lambda x: (-count_healthy(x), x['surname']))
+        return report
+    except Exception as e:
+        print(f"Ошибка при формировании отчёта 1: {e}")
+        return []
+
+
+def generate_report_2(children, target_group):
+    """Отчёт 2: по дате рождения для заданной группы."""
+    try:
+        if not children:
+            raise ValueError("Нет данных для формирования отчёта")
+
+        valid_groups = ['младшая', 'средняя', 'старшая']
+        if target_group not in valid_groups:
+            raise ValueError(f"Некорректная группа. Допустимые значения: {', '.join(valid_groups)}")
+
+        filtered = [c for c in children if c['group'] == target_group]
+
+        if not filtered:
+            print(f"В группе '{target_group}' нет детей")
+            return []
+
+
+        selection_sort(filtered, key_func=lambda x: (x['year'], x['month'], x['day']))
+        return filtered
+    except Exception as e:
+        print(f"Ошибка при формировании отчёта 2: {e}")
+        return []
+
+
+def generate_report_3(children):
+    """Отчёт 3: нуждающиеся в лечении, отсортированные по группе и фамилии."""
+    try:
+        if not children:
+            raise ValueError("Нет данных для формирования отчёта")
+
+        need_treatment = [c for c in children if any(v == 'нуждается в лечении' for v in [
+            c['neuro'], c['otolaryng'], c['ortho'], c['ophtalm']
+        ])]
+
+        if not need_treatment:
+            print("Нет детей, нуждающихся в лечении")
+            return []
+
+        selection_sort(need_treatment, key_func=lambda x: (x['group'], x['surname']))
+        return need_treatment
+    except Exception as e:
+        print(f"Ошибка при формировании отчёта 3: {e}")
+        return []
+
+
+def print_child(child, show_healthy_count=False):
+    """Форматированная печать данных ребёнка."""
+    try:
+        if show_healthy_count:
+            print(f"{child['surname']:15} {child['name']:10} | "
+                  f"{child['day']:2}.{child['month']:2}.{child['year']:4} | "
+                  f"{child['group']:10} | Здоровых: {count_healthy(child)}")
+        else:
+            print(f"{child['surname']:15} {child['name']:10} | "
+                  f"{child['day']:2}.{child['month']:2}.{child['year']:4} | "
+                  f"{child['group']:10}")
+    except Exception as e:
+        print(f"Ошибка при выводе данных ребёнка: {e}")
+
+
+def print_report(report, title, show_healthy_count=False):
+    """Вывод отчёта с заголовком."""
+    try:
+        print(f"\n{'=' * 80}")
+        print(f"{title:^80}")
+        print(f"{'=' * 80}")
+
+        if not report:
+            print("Нет данных для отображения")
+            return
+
+        for i, child in enumerate(report, 1):
+            print(f"{i:3}. ", end="")
+            print_child(child, show_healthy_count)
+        print(f"{'=' * 80}\n")
+    except Exception as e:
+        print(f"Ошибка при выводе отчёта: {e}")
+
+
+def get_groups_list(children):
+    """Возвращает список уникальных групп."""
+    return sorted(list(set(c['group'] for c in children)))
+
+
+def show_statistics(children):
+    """Показывает статистику по базе данных."""
+    try:
+        if not children:
+            print("\nНет загруженных данных")
+            return
+
+        print(f"\n{'=' * 60}")
+        print(f"{'СТАТИСТИКА':^60}")
+        print(f"{'=' * 60}")
+        print(f"Всего детей: {len(children)}")
+
+        groups = get_groups_list(children)
+        for group in groups:
+            count = len([c for c in children if c['group'] == group])
+            print(f"Группа '{group}': {count} детей")
+
+        healthy_all = sum(1 for c in children if all(
+            v == 'здоров' for v in [c['neuro'], c['otolaryng'], c['ortho'], c['ophtalm']]
+        ))
+        need_treatment = sum(1 for c in children if any(
+            v == 'нуждается в лечении' for v in [c['neuro'], c['otolaryng'], c['ortho'], c['ophtalm']]
+        ))
+
+        print(f"Абсолютно здоровы: {healthy_all} детей")
+        print(f"Нуждаются в лечении: {need_treatment} детей")
+        print(f"{'=' * 60}\n")
+    except Exception as e:
+        print(f"Ошибка при выводе статистики: {e}")
+
+
+def show_menu():
+    """Отображение меню программы."""
+    print("\n" + "=" * 60)
+    print(" " * 15 + "УЧЁТ РЕЗУЛЬТАТОВ ДИСПАНСЕРИЗАЦИИ")
+    print("=" * 60)
+    print("1. Полный список детей (по здоровым заключениям + фамилия)")
+    print("2. Список детей заданной группы (по дате рождения)")
+    print("3. Список детей, нуждающихся в лечении (по группе + фамилия)")
+    print("4. Загрузить данные из файла")
+    print("5. Показать статистику")
+    print("0. Выход")
+    print("-" * 60)
+
+
+def main():
+    """Основная программа с циклическим меню."""
+    children = []
+
+    try:
+        with open("children.txt", 'r', encoding='utf-8') as f:
+            pass
+        children = read_file("children.txt")
+    except FileNotFoundError:
+        print("Файл 'children.txt' не найден. Пожалуйста, создайте его или используйте пункт 4 для загрузки.")
+
+    while True:
+        show_menu()
+        choice = input("Выберите действие: ").strip()
+
+        if choice == "0":
+            print("\nПрограмма завершена. До свидания!")
+            break
+
+        elif choice == "1":
+            if not children:
+                print("\nСначала загрузите данные (пункт 4)")
+                input("\nНажмите Enter, чтобы продолжить...")
+                continue
+
+            report = generate_report_1(children)
+            print_report(report, "ОТЧЁТ №1: ПО КОЛИЧЕСТВУ ЗДОРОВЫХ ЗАКЛЮЧЕНИЙ", show_healthy_count=True)
+            input("\nНажмите Enter, чтобы продолжить...")
+
+        elif choice == "2":
+            if not children:
+                print("\nСначала загрузите данные (пункт 4)")
+                input("\nНажмите Enter, чтобы продолжить...")
+                continue
+
+            groups = get_groups_list(children)
+            print(f"\nДоступные группы: {', '.join(groups)}")
+            target_group = input("Введите название группы: ").strip().lower()
+
+            report = generate_report_2(children, target_group)
+            print_report(report, f"ОТЧЁТ №2: ГРУППА '{target_group.upper()}' (ПО ДАТЕ РОЖДЕНИЯ)")
+            input("\nНажмите Enter, чтобы продолжить...")
+
+        elif choice == "3":
+            if not children:
+                print("\nСначала загрузите данные (пункт 4)")
+                input("\nНажмите Enter, чтобы продолжить...")
+                continue
+
+            report = generate_report_3(children)
+            print_report(report, "ОТЧЁТ №3: НУЖДАЮЩИЕСЯ В ЛЕЧЕНИИ")
+            input("\nНажмите Enter, чтобы продолжить...")
+
+        elif choice == "4":
+            filename = input("Введите имя файла (например, children.txt): ").strip()
+            if not filename:
+                filename = "children.txt"
+            children = read_file(filename)
+            input("\nНажмите Enter, чтобы продолжить...")
+
+        elif choice == "5":
+            show_statistics(children)
+            input("\nНажмите Enter, чтобы продолжить...")
+
+        else:
+            print("\nОшибка: неверный выбор. Пожалуйста, выберите пункт от 0 до 5.")
+            input("\nНажмите Enter, чтобы продолжить...")
+
+
+if __name__ == "__main__":
+    main()
