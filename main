@@ -1,3 +1,4 @@
+import re
 def read_file(filename):
     """Считывает файл и возвращает список словарей с данными детей."""
     children = []
@@ -9,10 +10,10 @@ def read_file(filename):
                 raise ValueError("Файл пуст")
 
             for line_num, line in enumerate(lines, 1):
-                if line.strip():  #
-                    parts = line.strip().split('\t')
+                if line.strip():
+                    parts = re.split(r'\s+', line.strip())
 
-                    # Проверяем количество полей
+
                     if len(parts) != 10:
                         print(f"Предупреждение: строка {line_num} имеет {len(parts)} полей, ожидается 10. Пропущена.")
                         continue
@@ -31,7 +32,6 @@ def read_file(filename):
                             'ophtalm': parts[9]
                         }
 
-
                         if not (1900 <= child['year'] <= 2026):
                             raise ValueError(f"Некорректный год рождения: {child['year']}")
                         if not (1 <= child['month'] <= 12):
@@ -43,7 +43,7 @@ def read_file(filename):
                         if child['group'] not in valid_groups:
                             raise ValueError(f"Некорректная группа: {child['group']}")
 
-                        valid_conclusions = ['здоров', 'нуждается в лечении']
+                        valid_conclusions = ['здоров', 'нуждаетсявлечении']
                         for specialist in ['neuro', 'otolaryng', 'ortho', 'ophtalm']:
                             if child[specialist] not in valid_conclusions:
                                 raise ValueError(f"Некорректное заключение: {child[specialist]}")
@@ -61,9 +61,6 @@ def read_file(filename):
 
     except FileNotFoundError:
         print(f"Ошибка: Файл '{filename}' не найден")
-        return []
-    except ValueError as e:
-        print(f"Ошибка: {e}")
         return []
     except Exception as e:
         print(f"Непредвиденная ошибка при чтении файла: {e}")
@@ -134,7 +131,7 @@ def generate_report_3(children):
         if not children:
             raise ValueError("Нет данных для формирования отчёта")
 
-        need_treatment = [c for c in children if any(v == 'нуждается в лечении' for v in [
+        need_treatment = [c for c in children if any(v == 'нуждаетсявлечении' for v in [
             c['neuro'], c['otolaryng'], c['ortho'], c['ophtalm']
         ])]
 
@@ -209,7 +206,7 @@ def show_statistics(children):
             v == 'здоров' for v in [c['neuro'], c['otolaryng'], c['ortho'], c['ophtalm']]
         ))
         need_treatment = sum(1 for c in children if any(
-            v == 'нуждается в лечении' for v in [c['neuro'], c['otolaryng'], c['ortho'], c['ophtalm']]
+            v == 'нуждаетсявлечении' for v in [c['neuro'], c['otolaryng'], c['ortho'], c['ophtalm']]
         ))
 
         print(f"Абсолютно здоровы: {healthy_all} детей")
